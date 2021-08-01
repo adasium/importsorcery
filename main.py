@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import ast
+import inspect
 import os
 import sys
 from argparse import ArgumentParser
 from collections import defaultdict
+from types import ModuleType
 from typing import List
 from typing import Optional
 from typing import Sequence
 
 IMPORTS = []
-DEFS = defaultdict(list)
+DEFS: dict[str, set] = defaultdict(set)
+INDEXED_MODULES: set[ModuleType] = set()
 
 
 
@@ -40,7 +43,8 @@ class MyVisitor(ast.NodeVisitor):
     visit_Import = visit_ImportFrom = visit_import
 
     def visit_def(self, node: ast.FunctionDef | ast.ClassDef | ast.AsyncFunctionDef) -> None:
-        DEFS[node.name].append((self.import_path, node))
+        if not node.name.startswith('_'):
+            DEFS[node.name].add((self.import_path))
 
     visit_ClassDef = visit_FunctionDef = visit_AsyncFunctionDef = visit_def
 
@@ -62,7 +66,10 @@ def index_directory(directory: str, ignored_dirs: List[str] = None) -> None:
             if not file.endswith('.py'):
                 continue
             with open(os.path.join(root, file)) as f:
-                module = ast.parse(f.read())
+                try:
+                    module = ast.parse(f.read())
+                except (SyntaxError, UnicodeDecodeError):
+                    continue
                 visitor = MyVisitor(
                     root_path=directory,
                     module_path=os.path.join(root, file),
@@ -71,12 +78,38 @@ def index_directory(directory: str, ignored_dirs: List[str] = None) -> None:
                 visitor.import_path
 
 
+def _index_system_module(module_name: str, module: ModuleType, prefix: str = '') -> None:
+    """module_name is to workaround os.path being os.posixpath on Linux."""
+    DEFS[module.__name__].add(module.__name__)
+    if module in INDEXED_MODULES:
+        return
+    INDEXED_MODULES.add(module)
+    for attr in dir(module):
+        if attr.startswith('_'):
+            continue
+        value = getattr(module, attr)
+        DEFS[attr].add(module.__name__ + '.' + attr)
+        if inspect.ismodule(value):
+            _index_system_module(attr, value, prefix='.'.join((prefix, attr)))
+
+
+def index_system_modules() -> None:
+    for name, module in sys.modules.items():
+        if not name.startswith('_'):
+            _index_system_module(name, module)
+
+
 def main(args: Optional[Sequence[str]] = None) -> int:
     parser = ArgumentParser()
     parser.add_argument('--symbol', '--import-symbol')
-    parser.add_argument('--index', metavar='DIRECTORY')
-    parser.add_argument('--exclude', '-e', metavar='PATHS', nargs='+')
+    parser.add_argument('--index', metavar='DIRECTORY', required=True)
+    parser.add_argument('--exclude', '-e', metavar='DIRECTORIES', nargs='+')
+    parser.add_argument('--python-path', '-p', metavar='PATH', required=True)
     args_ = parser.parse_args()
+
+    index_system_modules()
+    __import__('pprint').pprint(DEFS)
+    return 0
 
     print(args_.exclude)
     if args_.index:
