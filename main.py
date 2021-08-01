@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import datetime
 import inspect
 import os
 import sys
@@ -54,7 +55,7 @@ def get_import_candidates(symbol: str) -> List[str]:
     if symbol not in DEFS:
         return []
 
-    return [import_path for import_path, ast_obj in DEFS[symbol]]
+    return [import_path for import_path in DEFS[symbol]]
 
 
 def index_directory(directory: str, ignored_dirs: List[str] = None) -> None:
@@ -108,10 +109,7 @@ def main(args: Optional[Sequence[str]] = None) -> int:
     args_ = parser.parse_args()
 
     index_system_modules()
-    __import__('pprint').pprint(DEFS)
-    return 0
 
-    print(args_.exclude)
     if args_.index:
         index_directory(args_.index, ignored_dirs=args_.exclude)
 
@@ -119,12 +117,16 @@ def main(args: Optional[Sequence[str]] = None) -> int:
             symbol = args_.symbol
             candidates = get_import_candidates(symbol)
             if len(candidates) > 1:
-                print([f'from {candidate} import {symbol}' for candidate in candidates])
+                for candidate in candidates:
+                    from_, _ , import_ = candidate.rpartition('.')
+                    if from_:
+                        print(f'from {from_} import {import_}')
+                    else:
+                        print(f'import {import_}')
             else:
                 print(f'No candidates for symbol {symbol}')
 
 
-    __import__('pprint').pprint(DEFS)
     return 0
 
 
