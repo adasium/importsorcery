@@ -89,9 +89,9 @@ def _index_system_module(module_name: str, module: ModuleType, prefix: str = '')
         if attr.startswith('_'):
             continue
         value = getattr(module, attr)
-        DEFS[attr].add(module.__name__ + '.' + attr)
+        DEFS[attr].add((prefix + '.' + attr).lstrip('.'))
         if inspect.ismodule(value):
-            _index_system_module(attr, value, prefix='.'.join((prefix, attr)))
+            _index_system_module(attr, value, prefix='.'.join((prefix, attr)).lstrip('.'))
 
 
 def index_system_modules() -> None:
@@ -116,7 +116,7 @@ def main(args: Optional[Sequence[str]] = None) -> int:
         if args_.symbol:
             symbol = args_.symbol
             candidates = get_import_candidates(symbol)
-            if len(candidates) > 1:
+            if len(candidates) > 0:
                 for candidate in candidates:
                     from_, _ , import_ = candidate.rpartition('.')
                     if from_:
