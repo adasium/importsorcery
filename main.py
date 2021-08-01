@@ -1,3 +1,4 @@
+#!/usr/bin/env python3.8
 from __future__ import annotations
 
 import ast
@@ -8,14 +9,52 @@ import sys
 from argparse import ArgumentParser
 from collections import defaultdict
 from types import ModuleType
-from typing import List
-from typing import Optional
 from typing import Sequence
 
 IMPORTS = []
 DEFS: dict[str, set] = defaultdict(set)
 INDEXED_MODULES: set[ModuleType] = set()
-CANDIDATES = []
+
+
+class Import:
+    SCORE = 1.0
+
+    def __init__(self, import_str: str, score: float | None = None) -> None:
+        self.import_str = import_str
+        self.parts = import_str.split('.')
+        self._score = score or self.SCORE
+
+    @property
+    def score(self) -> float:
+        if len(self.parts) > 1:
+            return self._score
+        else:
+            return self._score + 0.2
+
+
+    def __str__(self) -> str:
+        *head, tail = self.parts
+        if len(self.parts) > 1:
+            return 'from {head} import {tail}'.format(
+                head='.'.join(head),
+                tail=tail,
+            )
+        else:
+            return f'import {tail}'
+
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, Import):
+            return NotImplemented
+        else:
+            return other.score < self.score
+
+
+class LocalImport(Import):
+    SCORE = 2
+
+
+class SystemImport(Import):
+    SCORE = 1
 
 
 class MyVisitor(ast.NodeVisitor):
@@ -45,20 +84,20 @@ class MyVisitor(ast.NodeVisitor):
 
     def visit_def(self, node: ast.FunctionDef | ast.ClassDef | ast.AsyncFunctionDef) -> None:
         if not node.name.startswith('_'):
-            DEFS[node.name].add((self.import_path))
+            DEFS[node.name].add(LocalImport(self.import_path))
 
     visit_ClassDef = visit_FunctionDef = visit_AsyncFunctionDef = visit_def
 
 
 
-def get_import_candidates(symbol: str) -> List[str]:
+def get_import_candidates(symbol: str) -> list[str]:
     if symbol not in DEFS:
         return []
 
     return [import_path for import_path in DEFS[symbol]]
 
 
-def index_directory(directory: str, ignored_dirs: List[str] = None) -> None:
+def index_directory(directory: str, ignored_dirs: list[str] = None) -> None:
     ignored_dirs = ignored_dirs or []
     for root, dirs, files in os.walk(directory):
         dirs[:] = [d for d in dirs if d not in ignored_dirs]
@@ -88,7 +127,7 @@ def _index_system_module(module_name: str, module: ModuleType, prefix: str = '')
         if attr.startswith('_'):
             continue
         value = getattr(module, attr)
-        DEFS[attr].add('.'.join((prefix, module_name, attr)).lstrip('.'))
+        DEFS[attr].add(SystemImport('.'.join((prefix, module_name, attr)).lstrip('.')))
         if inspect.ismodule(value):
             _index_system_module(attr, value, prefix='.'.join((prefix, attr)).lstrip('.'))
 
@@ -96,12 +135,11 @@ def _index_system_module(module_name: str, module: ModuleType, prefix: str = '')
 def index_system_modules() -> None:
     for name, module in sys.modules.items():
         if not name.startswith('_'):
-            DEFS[name].add(name)
+            DEFS[name].add(SystemImport(name))
             _index_system_module(name, module)
 
 
-def main(args: Optional[Sequence[str]] = None) -> int:
-    global CANDIDATES
+def main(args: Sequence[str] | None = None) -> int:
     parser = ArgumentParser()
     parser.add_argument('--symbol', '--import-symbol')
     parser.add_argument('--index', metavar='DIRECTORY', required=True)
@@ -117,21 +155,9 @@ def main(args: Optional[Sequence[str]] = None) -> int:
     if args_.symbol:
         symbol = args_.symbol
         candidates = get_import_candidates(symbol)
-        if len(candidates) > 0:
-            for candidate in candidates:
-                from_, _ , import_ = candidate.rpartition('.')
-                if from_:
-                    CANDIDATES.append(f'from {from_} import {import_}')
-                else:
-                    CANDIDATES.append(f'import {import_}')
-        else:
-            pass
-    CANDIDATES = sorted(
-        CANDIDATES,
-        key=lambda x: (-1, x) if not x.startswith('from') else (1, x),
-    )
-    for candidate in CANDIDATES:
-        print(candidate)
+        candidates.sort()
+        for candidate in candidates:
+            print(candidate)
     return 0
 
 
