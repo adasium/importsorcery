@@ -15,7 +15,7 @@ from typing import Sequence
 IMPORTS = []
 DEFS: dict[str, set] = defaultdict(set)
 INDEXED_MODULES: set[ModuleType] = set()
-
+CANDIDATES = []
 
 
 class MyVisitor(ast.NodeVisitor):
@@ -81,7 +81,6 @@ def index_directory(directory: str, ignored_dirs: List[str] = None) -> None:
 
 def _index_system_module(module_name: str, module: ModuleType, prefix: str = '') -> None:
     """module_name is to workaround os.path being os.posixpath on Linux."""
-    DEFS[module.__name__].add(module.__name__)
     if module in INDEXED_MODULES:
         return
     INDEXED_MODULES.add(module)
@@ -89,7 +88,7 @@ def _index_system_module(module_name: str, module: ModuleType, prefix: str = '')
         if attr.startswith('_'):
             continue
         value = getattr(module, attr)
-        DEFS[attr].add((prefix + '.' + attr).lstrip('.'))
+        DEFS[attr].add('.'.join((prefix, module_name, attr)).lstrip('.'))
         if inspect.ismodule(value):
             _index_system_module(attr, value, prefix='.'.join((prefix, attr)).lstrip('.'))
 
@@ -97,10 +96,12 @@ def _index_system_module(module_name: str, module: ModuleType, prefix: str = '')
 def index_system_modules() -> None:
     for name, module in sys.modules.items():
         if not name.startswith('_'):
+            DEFS[name].add(name)
             _index_system_module(name, module)
 
 
 def main(args: Optional[Sequence[str]] = None) -> int:
+    global CANDIDATES
     parser = ArgumentParser()
     parser.add_argument('--symbol', '--import-symbol')
     parser.add_argument('--index', metavar='DIRECTORY', required=True)
@@ -113,20 +114,24 @@ def main(args: Optional[Sequence[str]] = None) -> int:
     if args_.index:
         index_directory(args_.index, ignored_dirs=args_.exclude)
 
-        if args_.symbol:
-            symbol = args_.symbol
-            candidates = get_import_candidates(symbol)
-            if len(candidates) > 0:
-                for candidate in candidates:
-                    from_, _ , import_ = candidate.rpartition('.')
-                    if from_:
-                        print(f'from {from_} import {import_}')
-                    else:
-                        print(f'import {import_}')
-            else:
-                print(f'No candidates for symbol {symbol}')
-
-
+    if args_.symbol:
+        symbol = args_.symbol
+        candidates = get_import_candidates(symbol)
+        if len(candidates) > 0:
+            for candidate in candidates:
+                from_, _ , import_ = candidate.rpartition('.')
+                if from_:
+                    CANDIDATES.append(f'from {from_} import {import_}')
+                else:
+                    CANDIDATES.append(f'import {import_}')
+        else:
+            pass
+    CANDIDATES = sorted(
+        CANDIDATES,
+        key=lambda x: (-1, x) if not x.startswith('from') else (1, x),
+    )
+    for candidate in CANDIDATES:
+        print(candidate)
     return 0
 
 
