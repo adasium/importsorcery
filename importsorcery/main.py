@@ -84,7 +84,7 @@ class MyVisitor(ast.NodeVisitor):
 
     def visit_def(self, node: ast.FunctionDef | ast.ClassDef | ast.AsyncFunctionDef) -> None:
         if not node.name.startswith('_'):
-            DEFS[node.name].add(LocalImport(self.import_path))
+            DEFS[node.name].add(LocalImport('.'.join((self.import_path, node.name))))
 
     visit_ClassDef = visit_FunctionDef = visit_AsyncFunctionDef = visit_def
 
