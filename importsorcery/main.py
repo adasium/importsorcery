@@ -11,7 +11,8 @@ from collections import defaultdict
 from types import ModuleType
 from typing import Sequence
 
-IMPORTS = []
+from .index import Index
+
 DEFS: dict[str, set] = defaultdict(set)
 INDEXED_MODULES: set[ModuleType] = set()
 
@@ -57,67 +58,6 @@ class SystemImport(Import):
     SCORE = 1
 
 
-class MyVisitor(ast.NodeVisitor):
-    def __init__(self, root_path: str, module_path: str) -> None:
-        super().__init__()
-        self.root_path = root_path
-        self.module_path = module_path
-
-    @property
-    def rel_path(self) -> str:
-        return os.path.relpath(self.module_path, self.root_path)
-
-    @property
-    def import_path(self) -> str:
-        dir, filename = os.path.split(self.rel_path)
-        if filename == '__init__.py':
-            path = dir
-        else:
-            path = os.path.splitext(self.rel_path)[0]
-
-        return path.replace(os.sep, '.')
-
-    def visit_import(self, node: ast.Import | ast.ImportFrom) -> None:
-        IMPORTS.append(node)
-
-    visit_Import = visit_ImportFrom = visit_import
-
-    def visit_def(self, node: ast.FunctionDef | ast.ClassDef | ast.AsyncFunctionDef) -> None:
-        if not node.name.startswith('_'):
-            DEFS[node.name].add(LocalImport('.'.join((self.import_path, node.name))))
-
-    visit_ClassDef = visit_FunctionDef = visit_AsyncFunctionDef = visit_def
-
-
-
-def get_import_candidates(symbol: str) -> list[str]:
-    if symbol not in DEFS:
-        return []
-
-    return [import_path for import_path in DEFS[symbol]]
-
-
-def index_directory(directory: str, ignored_dirs: list[str] = None) -> None:
-    ignored_dirs = ignored_dirs or []
-    for root, dirs, files in os.walk(directory):
-        dirs[:] = [d for d in dirs if d not in ignored_dirs]
-
-        for file in files:
-            if not file.endswith('.py'):
-                continue
-            with open(os.path.join(root, file)) as f:
-                try:
-                    module = ast.parse(f.read())
-                except (SyntaxError, UnicodeDecodeError):
-                    continue
-                visitor = MyVisitor(
-                    root_path=directory,
-                    module_path=os.path.join(root, file),
-                )
-                visitor.visit(module)
-                visitor.import_path
-
-
 def _index_system_module(module_name: str, module: ModuleType, prefix: str = '') -> None:
     """module_name is to workaround os.path being os.posixpath on Linux."""
     if module in INDEXED_MODULES:
@@ -149,12 +89,15 @@ def main(args: Sequence[str] | None = None) -> int:
 
     index_system_modules()
 
+    index = Index()
+
     if args_.index:
-        index_directory(args_.index, ignored_dirs=args_.exclude)
+        # index_directory(args_.index, ignored_dirs=args_.exclude)
+        index.index_project(args_.index)
 
     if args_.symbol:
         symbol = args_.symbol
-        candidates = get_import_candidates(symbol)
+        candidates = index.get_candidates(project_root=args_.index, symbol=symbol)
         candidates.sort()
         for candidate in candidates:
             print(candidate)
