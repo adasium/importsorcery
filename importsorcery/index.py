@@ -54,8 +54,10 @@ class Index:
         candidates_paths = self._cache.get(symbol, [])
 
         for candidate_path in candidates_paths:
-            absolute_import = format_absolute_import(project_root, Path(candidate_path), symbol)
-            ret.append(absolute_import)
+            print(candidate_path, current_file_path)
+            if not current_file_path.samefile(candidate_path):
+                absolute_import = format_absolute_import(project_root, Path(candidate_path), symbol)
+                ret.append(absolute_import)
             if current_file_path is not None:
                 relative_import = format_relative_import(project_root, current_file_path, Path(candidate_path), symbol)
                 ret.append(relative_import)
