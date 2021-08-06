@@ -39,7 +39,7 @@ class Index:
             dirs[:] = [d for d in dirs if d not in self._ignored_dirs]
 
             for file in files:
-                if not file.endswith('.py'):
+                if not file.endswith('.py') or file.startswith('.'):
                     continue
                 abs_file_path = os.path.join(root_, file)
                 with open(abs_file_path) as f:
