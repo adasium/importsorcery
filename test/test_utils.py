@@ -9,6 +9,7 @@ from importsorcery.utils import format_relative_import
 @pytest.mark.parametrize(
     "project_root, target_file_path, symbol, expected_import", [
         (Path('/project/'), Path('/project/package/module_b.py'), 'Stuff', 'from package.module_b import Stuff'),
+        (Path('/project/'), Path('/project/utils.py'), 'Stuff', 'from utils import Stuff'),
     ],
 )
 def test_format_absolute_import(project_root, target_file_path, symbol, expected_import):

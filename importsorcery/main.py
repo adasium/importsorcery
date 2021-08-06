@@ -100,7 +100,7 @@ def main(args: Sequence[str] | None = None) -> int:
     if args_.symbol:
         symbol = args_.symbol
         if args_.current_file is not None:
-            current_file_path = Path(args_.current_file)
+            current_file_path: Path | None = Path(args_.current_file)
         else:
             current_file_path = None
         candidates = index.get_candidates(project_root=args_.index, symbol=symbol, current_file_path=current_file_path)
