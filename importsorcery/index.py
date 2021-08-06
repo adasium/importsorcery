@@ -49,16 +49,15 @@ class Index:
                     for symbol in visitor.symbols:
                         self._cache[symbol].append(abs_file_path)
 
-    def get_candidates(self, project_root: Path, symbol: str, current_file_path: Path | None = None) -> list[str]:
+    def get_candidates(self, project_root: Path, symbol: str, current_file_path: Path | None) -> list[str]:
         ret = []
         candidates_paths = self._cache.get(symbol, [])
 
         for candidate_path in candidates_paths:
-            print(candidate_path, current_file_path)
-            if not current_file_path.samefile(candidate_path):
+            if current_file_path is None or not current_file_path.samefile(candidate_path):
                 absolute_import = format_absolute_import(project_root, Path(candidate_path), symbol)
                 ret.append(absolute_import)
-            if current_file_path is not None:
+            if current_file_path is not None and not current_file_path.samefile(candidate_path):
                 relative_import = format_relative_import(project_root, current_file_path, Path(candidate_path), symbol)
                 ret.append(relative_import)
 
