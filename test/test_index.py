@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+
 from importsorcery.index import Index
 from testing.fixtures import FakeProject
 
@@ -57,3 +58,16 @@ def test_index_relative_import_skip_importing_from_currently_edited_file(current
         index.index_project(root=fp.project_root)
         candidates = index.get_candidates(fp.project_root, symbol, current_file_path=fp.project_root / currently_edited_file)
         assert unexpected_import not in candidates
+
+
+@pytest.mark.parametrize(
+    "symbol, expected_import", [
+        ('datetime', 'import datetime'),
+        ('datetime', 'from datetime import datetime'),
+    ],
+)
+def test_index_system_import(symbol, expected_import):
+    index = Index()
+    index.index_system_modules()
+    candidates = index.get_candidates(project_root='', symbol=symbol)
+    assert expected_import in candidates

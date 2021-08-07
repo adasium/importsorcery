@@ -2,8 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from importsorcery.utils import format_absolute_import
-from importsorcery.utils import format_relative_import
+from importsorcery.index import Import
 
 
 @pytest.mark.parametrize(
@@ -13,7 +12,7 @@ from importsorcery.utils import format_relative_import
     ],
 )
 def test_format_absolute_import(project_root, target_file_path, symbol, expected_import):
-    absolute_import = format_absolute_import(project_root, target_file_path, symbol)
+    absolute_import = Import(target_file_path).get_absolute_import(symbol=symbol, root=project_root)
 
     assert absolute_import == expected_import
 
@@ -25,6 +24,6 @@ def test_format_absolute_import(project_root, target_file_path, symbol, expected
 )
 
 def test_format_relative_import(project_root, current_file_path, target_file_path, symbol, expected_import):
-    relative_import = format_relative_import(project_root, current_file_path, target_file_path, symbol)
+    relative_import = Import(target_file_path).get_relative_import(symbol=symbol, current_file_path=current_file_path, root=project_root)
 
     assert relative_import == expected_import
