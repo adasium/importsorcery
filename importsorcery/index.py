@@ -5,7 +5,6 @@ import inspect
 import os
 import sys
 from collections import defaultdict
-from enum import Enum
 from pathlib import Path
 from types import ModuleType
 
@@ -13,7 +12,6 @@ from importsorcery.imports import Import
 from importsorcery.imports import ImportSource
 
 SYSTEM_MODULES = (
-    '__future__',
     'argparse',
     'ast',
     'collections',
@@ -27,6 +25,7 @@ SYSTEM_MODULES = (
     'logging',
     'os',
     'pathlib',
+    'random',
     're',
     'sys',
     'time',
@@ -43,6 +42,11 @@ class MyVisitor(ast.NodeVisitor):
     @property
     def symbols(self) -> list[str]:
         return self._symbols
+
+    def visit_Assign(self, node: ast.Assign) -> None:
+        for target in node.targets:
+            if isinstance(target, ast.Name) and not target.id.startswith('_'):
+                self._symbols.append(target.id)
 
     def visit_def(self, node: ast.FunctionDef | ast.ClassDef | ast.AsyncFunctionDef) -> None:
         if not node.name.startswith('_'):

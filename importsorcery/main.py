@@ -1,15 +1,9 @@
 #!/usr/bin/env python3.8
 from __future__ import annotations
 
-import ast
-import datetime
-import inspect
-import os
 import sys
 from argparse import ArgumentParser
-from collections import defaultdict
 from pathlib import Path
-from types import ModuleType
 from typing import Sequence
 
 from .index import Index
