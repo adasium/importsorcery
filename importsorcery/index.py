@@ -86,7 +86,6 @@ class Index:
         ret = []
         candidates = self._cache.get(symbol, set())
 
-        c = [(c._path, c._parts) for c in candidates]
         for candidate in candidates:
             if candidate.source == ImportSource.SYSTEM:
                 ret.append(candidate.get_absolute_import(symbol))
@@ -113,7 +112,6 @@ class Index:
 
                 if inspect.ismodule(value):
                     self._index_system_module(name=attr, module=value, _parts=_parts + [attr])
-
 
     def index_system_modules(self) -> None:
         system_modules = {k: v for k, v in sys.modules.items() if k in SYSTEM_MODULES}
