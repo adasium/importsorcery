@@ -4,6 +4,7 @@ import os
 from enum import Enum
 from pathlib import Path
 
+
 class ImportSource(Enum):
     PROJECT = 'project'
     SYSTEM = 'system'
@@ -17,7 +18,12 @@ def _format_import_path(path: Path) -> str:
 
 
 class Import:
-    def __init__(self, path: str | Path | None = None, parts: list[str] = None, source: ImportSource = ImportSource.PROJECT) -> None:
+    def __init__(
+            self,
+            path: str | Path | None = None,
+            parts: list[str] = None,
+            source: ImportSource = ImportSource.PROJECT,
+    ) -> None:
         if path is None and not parts:
             raise ValueError('Either path or parts must be specified')
         self.source = source
