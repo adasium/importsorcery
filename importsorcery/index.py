@@ -30,6 +30,7 @@ SYSTEM_MODULES = (
     'sys',
     'time',
     'types',
+    'typing',
     'urllib',
 )
 
