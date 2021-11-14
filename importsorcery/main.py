@@ -11,10 +11,10 @@ from .index import Index
 
 def main(args: Sequence[str] | None = None) -> int:
     parser = ArgumentParser()
-    parser.add_argument('--symbol', '--import-symbol')
+    parser.add_argument('--symbol', '-s', '--import-symbol')
     parser.add_argument('--index', metavar='DIRECTORY', required=True)
     parser.add_argument('--exclude', '-e', metavar='DIRECTORIES', nargs='+')
-    parser.add_argument('--python-path', '-p', metavar='PATH', required=True)
+    parser.add_argument('--python-path', '-p', metavar='PATH', required=False)
     parser.add_argument('--current-file', metavar='PATH', required=False)
     args_ = parser.parse_args()
 
