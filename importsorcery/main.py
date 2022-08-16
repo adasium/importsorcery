@@ -18,6 +18,7 @@ class ImportSorceryArgs(Tap):
     exclude_dirs: List[Path]
     python_path: Path
     current_file: Optional[Path]
+    include_relative_imports: bool = False
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -34,6 +35,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             project_root=args.project_root,
             symbol=args.symbol,
             current_file_path=args.current_file,
+            include_relative_imports=args.include_relative_imports,
         )
         for candidate in sorted(candidates):
             print(candidate)

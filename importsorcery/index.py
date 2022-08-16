@@ -82,7 +82,13 @@ class Index:
                     for symbol in visitor.symbols:
                         self._cache[symbol].add(Import(abs_file_path, source=ImportSource.PROJECT))
 
-    def get_candidates(self, project_root: Path, symbol: str, current_file_path: Path | None = None) -> list[str]:
+    def get_candidates(
+            self,
+            project_root: Path,
+            symbol: str,
+            current_file_path: Path | None = None,
+            include_relative_imports: bool = False,
+    ) -> list[str]:
         ret = []
         candidates = self._cache.get(symbol, set())
 
@@ -93,10 +99,9 @@ class Index:
                 if current_file_path is None or not current_file_path.samefile(candidate.path):
                     absolute_import = candidate.get_absolute_import(symbol=symbol, root=project_root)
                     ret.append(absolute_import)
-                if current_file_path is not None and not current_file_path.samefile(candidate.path):
+                if current_file_path is not None and not current_file_path.samefile(candidate.path) and include_relative_imports:
                     relative_import = candidate.get_relative_import(symbol=symbol, current_file_path=current_file_path, root=project_root)
                     ret.append(relative_import)
-
         return ret
 
     def _index_system_module(self, name: str, module: ModuleType, _parts: list[str]) -> None:
