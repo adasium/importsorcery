@@ -2,38 +2,45 @@
 from __future__ import annotations
 
 import sys
-from argparse import ArgumentParser
 from pathlib import Path
+from typing import List
+from typing import Optional
 from typing import Sequence
 
-from .index import Index
+from tap import Tap
+
+from importsorcery.index import Index
 
 
-def main(args: Sequence[str] | None = None) -> int:
-    parser = ArgumentParser()
-    parser.add_argument('--symbol', '-s', '--import-symbol')
-    parser.add_argument('--index', metavar='DIRECTORY', required=True)
-    parser.add_argument('--exclude', '-e', metavar='DIRECTORIES', nargs='+')
-    parser.add_argument('--python-path', '-p', metavar='PATH', required=False)
-    parser.add_argument('--current-file', metavar='PATH', required=False)
-    args_ = parser.parse_args()
+class ImportSorceryArgs(Tap):
+    symbol: str
+    index: Path
+    exclude: List[Path]
+    python_path: Path
+    current_file: Optional[Path]
+
+    def configure(self) -> None:
+        self.add_argument('--python-path', '-p', type=Path)
+        self.add_argument('--current-file', type=Path)
+        self.add_argument('--exclude', '-e')
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = ImportSorceryArgs().parse_args()
 
     index = Index()
     index.index_system_modules()
 
-    if args_.index:
-        # index_directory(args_.index, ignored_dirs=args_.exclude)
-        index.index_project(args_.index)
+    if args.index:
+        index.index_project(args.index)
 
-    if args_.symbol:
-        symbol = args_.symbol
-        if args_.current_file is not None:
-            current_file_path: Path | None = Path(args_.current_file)
-        else:
-            current_file_path = None
-        candidates = index.get_candidates(project_root=args_.index, symbol=symbol, current_file_path=current_file_path)
-        candidates.sort()
-        for candidate in candidates:
+    if args.symbol:
+        candidates = index.get_candidates(
+            project_root=args.index,
+            symbol=args.symbol,
+            current_file_path=args.current_file,
+        )
+        for candidate in sorted(candidates):
             print(candidate)
     return 0
 
